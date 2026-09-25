@@ -141,7 +141,7 @@
 <script>
     // PODMIEŃ PONIŻSZE DWA WIERSZE NA SWOJE DANE Z SUPABASE
     const SUPABASE_URL = 'https://qetowkeybesdhyxveipy.supabase.co';
-    const SUPABASE_KEY = 'TUTAJ_WKLEJ_SWOJ_KLUCZ_ANON_PUBLIC';
+    const SUPABASE_KEY = 'sb_publishable_wJ246ReHSHd9K1Tjf6GCcA_ESaGElqa';
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
